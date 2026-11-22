@@ -5,7 +5,7 @@ service Schedule {
     rpc CreateSchedule(NewSchedule) returns (Day) {}
     rpc GetScheduleByDate(Date) returns (Day) {}
     rpc GetDatesByMovieId(MovieID) returns (Dates) {}
-    rpc DeleteScheduleByDate(Date) returns (Day) {}
+    rpc DeleteScheduleByDate(Date) returns (Schedules) {}
     rpc DeleteMovieFromDate(NewSchedule) returns (Day) {}
 }
 

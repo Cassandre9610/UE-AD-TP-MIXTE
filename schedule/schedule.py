@@ -17,10 +17,7 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
 
 
     def GetSchedule(self, request, context):
-        schedules = []
-        for day in self.db :
-            schedules.append(schedule_pb2.Day(date = day["date"], movies = day["movies"]))
-        return schedule_pb2.Schedules(schedule = schedules)
+        return self._db_to_schedules()
 
 
     def GetScheduleByDate(self, request, context):
@@ -65,31 +62,35 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
     def DeleteMovieFromDate(self, request, context):
         old_schedule: list[dict] = self.db
         new_schedule = []
+        res = self._make_day({"date": "", "movies": []})
+        
         for day in old_schedule :
             new_day = copy.deepcopy(day)
             if new_day["date"] == request.date :
                 new_day["movies"] = [movie for movie in new_day["movies"] if movie != request.movie]
+                res = self._make_day(new_day)
             
             if len(new_day["movies"]) > 0 :
                 new_schedule.append(new_day)
     
         if new_schedule == old_schedule:
             # 404
-            return schedule_pb2.Schedules(schedule = [])
+            return self._make_day({"date": "", "movies": []})
 
         self.db = new_schedule
         self._write()
-        return self.GetSchedule(request, context) #TODO probleme ?
+        return res
 
 
     def DeleteScheduleByDate(self, request, context):
+        print("suppression par date")
         old_schedule = copy.deepcopy(self.db)
         self.db = [day for day in old_schedule if day["date"] != request.date]
         if self.db == old_schedule:
             #erreur
             return schedule_pb2.Schedules(schedule = [])
         self._write()
-        return self.GetSchedule(request, context) #TODO problème ?
+        return self._db_to_schedules()
 
 
     def _write(self):
@@ -99,6 +100,13 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
 
     def _make_day(self, day):
         return schedule_pb2.Day(date = day["date"], movies = day["movies"])
+
+
+    def _db_to_schedules(self):
+        schedules = []
+        for day in self.db :
+            schedules.append(schedule_pb2.Day(date = day["date"], movies = day["movies"]))
+        return schedule_pb2.Schedules(schedule = schedules)
 
 
 def serve():
