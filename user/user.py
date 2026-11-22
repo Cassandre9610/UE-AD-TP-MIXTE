@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify, make_response
 # import requests
 import json
 from werkzeug.exceptions import NotFound
+from flask_jwt_extended import create_access_token, get_jwt_identity, JWTManager, jwt_required
 
 # CALLING gRPC requests
 import grpc
@@ -16,12 +17,14 @@ from concurrent import futures
 # todo to complete
 
 app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = "super-secret"
+jwt = JWTManager(app)
 
 PORT = 3004
 HOST = '0.0.0.0'
 
 with open('{}/data/users.json'.format("."), "r") as jsf:
-   users = json.load(jsf)["users"]
+   users: list = json.load(jsf)["users"]
 
 def write(new_users):
    with open('{}/data/users.json'.format("."), 'w') as f:
@@ -53,7 +56,12 @@ def get_by_id(userid):
    return error_not_found("User ID not found")
 
 @app.route("/user/name/<username>", methods=["GET"])
+@jwt_required()
 def get_by_name(username):
+   current_user = json.loads(get_jwt_identity())
+   if current_user["name"] != username and current_user["admin"] != True:
+      return make_response({"error": "You don't have access to that information"}, 401)
+
    for user in users:
       if str(user["name"]) == str(username):
          res = make_response(jsonify(user), 200)
@@ -85,7 +93,7 @@ def delete_user(userid):
 
 @app.route("/user/<userid>", methods=['POST'])
 def create_user(userid):
-   req = request.get_json()
+   req: dict = request.get_json()
 
    for user in users:
       if str(user["id"]) == str(userid):
@@ -94,10 +102,25 @@ def create_user(userid):
             return make_response(jsonify({"error":"user ID already exists"}),500)
 
    # req["last_used"] = time.time_ns() # Pas certain de la methode
+   if "admin" not in req.keys():
+      req["admin"] = False
+   
    users.append(req)
    write(users)
    res = make_response(jsonify({"message":"user added"}),200)
    return res
+
+@app.route("/login", methods=["POST"])
+def login():
+   req = request.get_json()
+   for user in users:
+      if user["id"] == req["id"]:
+         #TODO mdp
+         token = create_access_token(identity = json.dumps(user))
+         return make_response(jsonify(access_token = token), 200)
+
+   return error_not_found("User ID not found")
+
 
 if __name__ == "__main__":
    print("Server running in port %s"%(PORT))
