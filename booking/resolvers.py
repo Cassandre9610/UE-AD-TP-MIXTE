@@ -1,7 +1,12 @@
 import json
 from graphql import GraphQLError
+import requests
+import schedule_pb2
+import schedule_pb2_grpc
+import grpc
 
 DATA_PATH = '{}/data/bookings.json'.format(".")
+SCHEDULE_HOST = 'localhost:3003' #TODO env variable
 
 
 def _write(new_file):
@@ -18,49 +23,52 @@ def get_booking_with_userid(_, info, _userid):
         raise GraphQLError("Aucune reservation pour cet utilisateur")
 
 
-#TODO appels à schedule pour vérifier si le film est diffusé dans la date
 def add_booking(_, info, _userid: str, _date: str, _movie_id: str): 
+    with grpc.insecure_channel(SCHEDULE_HOST) as channel:
+        stub = schedule_pb2_grpc.ScheduleStub(channel)
+
+        try:
+            schedule_response = stub.GetScheduleByDate(_date)
+            if _movie_id not in [str(movie) for movie in schedule_response.movies]:
+                raise GraphQLError("Movie not found in schedule for this date")
+            
+        except grpc.RpcError:
+            raise GraphQLError("This date is not in the schedule")
+
     with open(DATA_PATH, "r") as file:
-        bookings: list = json.load(file)["bookings"]
+        bookings = json.load(file)["bookings"]
+        for booking in bookings:
+            if str(booking["userid"]) == _userid:
+                for booking_date in booking["dates"]:
+                    if str(booking_date["date"]) == _date:
+                        if _movie_id not in [
+                            str(movie) for movie in booking_date["movies"]
+                        ]:
+                            booking_date["movies"].append(_movie_id)
+                            _write(bookings)
 
-        for i in range(len(bookings)):
-            if bookings[i]["userid"] == _userid:
-                existing_booking = bookings[i]
+                        return booking
 
-                _add_to_existing_booking(existing_booking, _date, _movie_id)
-                _write({"bookings" : bookings})
-                return existing_booking
+                booking["dates"].append({
+                    "date": _date,
+                    "movies": [_movie_id]
+                })
+                _write(bookings)
+                return booking
 
-        return _create_new_booking(bookings, _userid, _date, _movie_id)
-
-
-def _add_to_existing_booking(existing_booking, _date, _movie_id):
-    i_existing_date = -1
-    for i in range(len(existing_booking["dates"])):
-        if existing_booking["dates"][i]["date"] == _date:
-            existing_date: list = existing_booking["dates"][i_existing_date]
-                    
-            if _movie_id not in existing_date["movies"]:
-                existing_date["movies"].append(_movie_id)
-                return
-            else:
-                raise GraphQLError("Le film est déjà réservé")
-    
-    existing_booking["dates"].append({"date":_date, "movies": [_movie_id]})
-
-
-def _create_new_booking(bookings:list, _userid, _date, _movie_id):
-    new_booking = {
-        "userid": _userid,
-        "dates": [{
-            "date": _date,
-            "movies": [_movie_id]
-        }]
-    }
-
-    bookings.append(new_booking)
-    _write({"bookings" : bookings})
-    return new_booking
+        # aucune reservation pour cet user
+        new_booking = {
+            "userid": _userid,
+            "dates": [
+                {
+                    "date": _date,
+                    "movies": [_movie_id]
+                }
+            ]
+        }
+        bookings.append(new_booking)
+        _write(bookings)
+        return new_booking
 
 
 def delete_booking(_, info, _userid: str, _date: str, _movie_id: str):

@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, make_response
 
 import resolvers as r
 
-PORT = 3002
+PORT = 3003
 HOST = '0.0.0.0'
 app = Flask(__name__)
 

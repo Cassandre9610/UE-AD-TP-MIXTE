@@ -11,14 +11,14 @@ services:
       context: .
       dockerfile: booking/Dockerfile
     ports:
-      - "3002:3002"
+      - "3003:3003"
 
   schedule:
     build: 
       context: .
       dockerfile: schedule/Dockerfile
     ports:
-      - "3200:3200" #TODO
+      - "3002:3002" #TODO
 
   user: 
     build: 
