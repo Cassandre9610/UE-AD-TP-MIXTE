@@ -15,6 +15,7 @@ def get_booking_with_userid(_, info, _userid):
         for booking in bookings:
             if booking["userid"] == _userid:
                 return booking
+        raise GraphQLError("Aucune reservation pour cet utilisateur")
 
 
 #TODO appels à schedule pour vérifier si le film est diffusé dans la date
