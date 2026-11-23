@@ -4,6 +4,10 @@ import schedule_pb2
 import schedule_pb2_grpc
 import json
 import copy
+import requests
+
+
+MOVIE_SERVICE_HOST = "localhost:3001"
 
 class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
 
@@ -13,7 +17,17 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
 
 
     def check_if_movie_exists(self, movie_id:str):
-        return True #TODO
+        query = '''query GetMovie($id: String!) {
+                    movie_with_id(_id: $id) {
+                        id
+                    }
+                }'''
+        res = requests.post(f"http://{MOVIE_SERVICE_HOST}/graphql", json = {
+            "query": query,
+            "variables": {"id": movie_id}
+        })
+
+        return res.json()["data"]["movie_with_id"] is not None and len(res.json()["data"]["movie_with_id"]) > 0
 
 
     def GetSchedule(self, request, context):
