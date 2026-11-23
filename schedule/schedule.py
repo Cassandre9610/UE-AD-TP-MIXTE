@@ -38,7 +38,8 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
         for day in self.db:
             if day["date"] == request.date:
                 return self._make_day(day)
-        #erreur 404
+        context.set_code(grpc.StatusCode.NOT_FOUND)
+        context.set_details('Date is not in schedule')
         return self._make_day({"date": "", "movies": []})
 
 
@@ -53,6 +54,8 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
 
     def CreateSchedule(self, request, context):
         if not self.check_if_movie_exists(request.movie):
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details('Movie does not exists')
             return self._make_day({"date": "", "movies": []})
     
         for day in self.db:
@@ -61,7 +64,8 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
                     day["movies"].append(request.movie)
                     return self._make_day(day)
                 else :
-                    # erreur
+                    context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+                    context.set_details('Movie aready scheduled for this date')
                     return self._make_day({"date": "", "movies": []})
         # aucune date ne correspond
         new_day = {
@@ -88,7 +92,8 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
                 new_schedule.append(new_day)
     
         if new_schedule == old_schedule:
-            # 404
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details('Movie not found in this date')
             return self._make_day({"date": "", "movies": []})
 
         self.db = new_schedule
@@ -101,7 +106,8 @@ class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
         old_schedule = copy.deepcopy(self.db)
         self.db = [day for day in old_schedule if day["date"] != request.date]
         if self.db == old_schedule:
-            #erreur
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details('Date not found in schedule')
             return schedule_pb2.Schedules(schedule = [])
         self._write()
         return self._db_to_schedules()
