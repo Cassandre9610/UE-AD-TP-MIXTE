@@ -134,6 +134,7 @@ def serve():
     schedule_pb2_grpc.add_ScheduleServicer_to_server(ScheduleServicer(), server)
     server.add_insecure_port('[::]:3002')
     server.start()
+    print("Server started on port 3002")
     server.wait_for_termination()
 
 

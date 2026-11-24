@@ -10,9 +10,13 @@ type Schedule {
 
 type Query {
     booking_with_userid(_userid:String!): Booking
+    booking_with_date(_date: String!): [Booking]
+    booking_with_movie(_movie_id: String!): [Booking]
+    movies_with_userid_and_date(_user_id: String!, _date: String!): [String]
 }
 
 type Mutation {
     add_booking(_userid:String!, _date:String!, _movie_id:String!): Booking
-    delete_booking(_userid:String!, _date:String!, _movie_id:String!): Booking
+    delete_movie_from_date(_userid:String!, _date:String!, _movie_id:String!): Booking
+    delete_user_from_booking(_userid:String!): Booking
 }

@@ -14,10 +14,14 @@ schedule = ObjectType('Schedule')
 
 query = QueryType()
 query.set_field("booking_with_userid", r.get_booking_with_userid)
+query.set_field("booking_with_date", r.get_booking_with_date)
+query.set_field("booking_with_movie", r.get_booking_with_movie)
+query.set_field("movies_with_userid_and_date", r.get_movies_with_userid_and_date)
 
 mutation = MutationType()
 mutation.set_field("add_booking", r.add_booking)
-mutation.set_field("delete_booking", r.delete_booking)
+mutation.set_field("delete_movie_from_date", r.delete_movie_from_date)
+mutation.set_field("delete_user_from_booking", r.delete_user_from_booking)
 
 schema = make_executable_schema(type_defs, query, mutation, booking, schedule)
 
