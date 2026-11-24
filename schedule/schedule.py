@@ -5,9 +5,10 @@ import schedule_pb2_grpc
 import json
 import copy
 import requests
+import os
 
 
-MOVIE_SERVICE_HOST = "localhost:3001"
+MOVIE_SERVICE_HOST = os.environ.get('MOVIE_SERVICE_HOST') or "localhost:3001"
 
 class ScheduleServicer(schedule_pb2_grpc.ScheduleServicer):
 

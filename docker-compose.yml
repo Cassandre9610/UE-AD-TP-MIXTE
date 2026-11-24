@@ -12,13 +12,17 @@ services:
       dockerfile: booking/Dockerfile
     ports:
       - "3003:3003"
+    environment:
+      - SCHEDULE_HOST=schedule:3002
 
   schedule:
     build: 
       context: .
       dockerfile: schedule/Dockerfile
     ports:
-      - "3002:3002" #TODO
+      - "3002:3002"
+    environment:
+      - MOVIE_SERVICE_HOST=movie:3001
 
   user: 
     build: 
@@ -26,5 +30,3 @@ services:
       dockerfile: user/Dockerfile
     ports:
       - "3004:3004"
-
-

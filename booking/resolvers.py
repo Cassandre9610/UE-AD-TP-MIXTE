@@ -3,9 +3,10 @@ from graphql import GraphQLError
 import schedule_pb2_grpc
 import schedule_pb2
 import grpc
+import os
 
 DATA_PATH = '{}/data/bookings.json'.format(".")
-SCHEDULE_HOST = 'localhost:3002' #TODO env variable
+SCHEDULE_HOST = os.environ.get('SCHEDULE_HOST') or 'localhost:3002'
 
 
 def _read():
