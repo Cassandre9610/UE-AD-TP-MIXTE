@@ -1,10 +1,11 @@
 import json
 from graphql import GraphQLError
 import schedule_pb2_grpc
+import schedule_pb2
 import grpc
 
 DATA_PATH = '{}/data/bookings.json'.format(".")
-SCHEDULE_HOST = 'localhost:3003' #TODO env variable
+SCHEDULE_HOST = 'localhost:3002' #TODO env variable
 
 
 def _read():
@@ -70,12 +71,15 @@ def add_booking(_, info, _userid: str, _date: str, _movie_id: str):
         stub = schedule_pb2_grpc.ScheduleStub(channel)
 
         try:
-            schedule_response = stub.GetScheduleByDate(_date)
+            schedule_response = stub.GetScheduleByDate(schedule_pb2.Date(date = _date))
+            print("done")
             if _movie_id not in [str(movie) for movie in schedule_response.movies]:
                 raise GraphQLError("Movie not found in schedule for this date")
             
-        except grpc.RpcError:
-            raise GraphQLError("This date is not in the schedule")
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.NOT_FOUND:
+                raise GraphQLError("This date is not in the schedule")
+            raise e
 
     bookings = _read()
     for booking in bookings:
