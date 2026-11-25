@@ -34,7 +34,7 @@ def write(new_users):
 
 
 def error_not_found(message: str):
-   return make_response(jsonify({"error":message}),500) # TODO 404 ?
+   return make_response(jsonify({"error":message}),404)
 
 
 @app.route("/", methods=['GET'])
@@ -42,12 +42,21 @@ def home():
    return "<h1 style='color:blue'>Welcome to the User service!</h1>"
 
 @app.route("/json", methods=['GET'])
+@jwt_required()
 def get_json():
+   current_user = json.loads(get_jwt_identity())
+   if current_user.get("admin") != True:
+      return make_response({"error": "You don't have access to that information"}, 401)
    res = make_response(jsonify(users), 200)
    return res
 
 @app.route("/user/<userid>", methods=['GET'])
+@jwt_required()
 def get_by_id(userid):
+   current_user = json.loads(get_jwt_identity())
+   if current_user["id"] != userid and current_user.get("admin") != True:
+      return make_response({"error": "You don't have access to that information"}, 401)
+   
    for user in users:
       if str(user["id"]) == str(userid):
          res = make_response(jsonify(user),200)
@@ -59,7 +68,7 @@ def get_by_id(userid):
 @jwt_required()
 def get_by_name(username):
    current_user = json.loads(get_jwt_identity())
-   if current_user["name"] != username and current_user["admin"] != True:
+   if current_user["name"] != username and current_user.get("admin") != True:
       return make_response({"error": "You don't have access to that information"}, 401)
 
    for user in users:
@@ -71,7 +80,12 @@ def get_by_name(username):
 
 
 @app.route("/user/<userid>/name/<new_name>", methods=["PUT"])
+@jwt_required()
 def update_user(userid, new_name):
+   current_user = json.loads(get_jwt_identity())
+   if current_user["id"] != userid and current_user.get("admin") != True:
+      return make_response({"error": "You don't have access to that information"}, 401)
+   
    for user in users:
       if str(user["id"]) == userid:
          user["name"] = new_name
@@ -82,7 +96,12 @@ def update_user(userid, new_name):
    return error_not_found("User ID not found")
 
 @app.route("/user/<userid>", methods=['DELETE'])
+@jwt_required()
 def delete_user(userid):
+   current_user = json.loads(get_jwt_identity())
+   if current_user["id"] != userid and current_user.get("admin") != True:
+      return make_response({"error": "You don't have access to that information"}, 401)
+
    for user in users:
       if str(user["id"]) == str(userid):
          users.remove(user)
@@ -101,7 +120,7 @@ def create_user(userid):
             print(userid)
             return make_response(jsonify({"error":"user ID already exists"}),500)
 
-   # req["last_used"] = time.time_ns() # Pas certain de la methode
+   req["last_used"] = time.time_ns()
    if "admin" not in req.keys():
       req["admin"] = False
    
@@ -115,7 +134,6 @@ def login():
    req = request.get_json()
    for user in users:
       if user["id"] == req["id"]:
-         #TODO mdp
          token = create_access_token(identity = json.dumps(user))
          return make_response(jsonify(access_token = token), 200)
 
