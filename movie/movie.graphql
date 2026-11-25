@@ -1,10 +1,21 @@
 type Query {
+  movies: [Movie]
   movie_with_id(_id: String!): Movie
+  movie_with_title(_title: String!): [Movie]
   actor_with_id(_id: String!): Actor
 }
 
+type DeleteResponse {
+  success: Boolean!
+  message: String
+}
+
 type Mutation {
+  add_movie(_title: String!, _director: String!, _rating: Float!): Movie
   update_movie_rate(_id: String!, _rate: Float!): Movie
+  update_movie_title(_id: String!, _title: String!): Movie
+  update_movie_director(_id: String!, _director: String!): Movie
+  delete_movie(_id: String!): DeleteResponse
 }
 
 type Movie {
