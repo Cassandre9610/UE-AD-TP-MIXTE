@@ -17,7 +17,7 @@ def _read():
 
 def _write(new_file):
     with open(DATA_PATH, "w") as wfile:
-        json.dump(new_file, wfile)
+        json.dump({"bookings": new_file}, wfile)
 
 
 def get_booking_with_userid(_, info, _userid):
