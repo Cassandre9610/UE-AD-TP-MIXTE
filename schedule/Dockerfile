@@ -11,5 +11,7 @@ RUN pip install -r requirements.txt
 # copy the app files and directories
 COPY schedule/ /app/
 
+RUN python -m grpc_tools.protoc -I=. --python_out=. --grpc_python_out=. schedule.proto
+
 # start movie.py when the container is started
 CMD ["python3", "schedule.py"]
