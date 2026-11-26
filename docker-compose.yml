@@ -38,9 +38,24 @@ services:
     environment:
       - MOVIE_SERVICE_HOST=movie:3001
 
+  mongo-user:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./user/data:/seed:ro
+      - ./user/data/init.js:/docker-entrypoint-initdb.d/init.js:ro
+
   user:
     build:
       context: .
       dockerfile: user/Dockerfile
+    depends_on:
+      - mongo-user
     ports:
       - "3004:3004"
+    environment:
+      - MONGO_URI=mongodb://root:example@mongo-user:27017/
+

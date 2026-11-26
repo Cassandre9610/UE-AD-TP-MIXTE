@@ -1,21 +1,17 @@
 # REST API
-from flask import Flask, render_template, request, jsonify, make_response
-# import requests
 import json
-from werkzeug.exceptions import NotFound
-from flask_jwt_extended import create_access_token, get_jwt_identity, JWTManager, jwt_required
+import os
 import time
+from flask_jwt_extended import create_access_token, get_jwt_identity, JWTManager, jwt_required
+from flask import Flask, request, jsonify, make_response
+from pymongo import MongoClient, ReturnDocument
 
-# CALLING gRPC requests
-import grpc
-from concurrent import futures
-# import booking_pb2
-# import booking_pb2_grpc
-# import movie_pb2
-# import movie_pb2_grpc
+# MongoDB connection
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:example@mongo-user:27017/")
+client = MongoClient(MONGO_URI)
+db = client["userdb"]
+users_collection = db["users"]
 
-# CALLING GraphQL requests
-# todo to complete
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret"
@@ -23,15 +19,6 @@ jwt = JWTManager(app)
 
 PORT = 3004
 HOST = '0.0.0.0'
-
-with open('{}/data/users.json'.format("."), "r") as jsf:
-   users: list = json.load(jsf)["users"]
-
-def write(new_users):
-   with open('{}/data/users.json'.format("."), 'w') as f:
-      full = {}
-      full['users']=users
-      json.dump(full, f)
 
 
 def error_not_found(message: str):
@@ -42,14 +29,15 @@ def error_not_found(message: str):
 def home():
    return "<h1 style='color:blue'>Welcome to the User service!</h1>"
 
+
 @app.route("/json", methods=['GET'])
 @jwt_required()
 def get_json():
    current_user = json.loads(get_jwt_identity())
    if current_user.get("admin") != True:
       return make_response({"error": "You don't have access to that information"}, 401)
-   res = make_response(jsonify(users), 200)
-   return res
+   return make_response(jsonify(list(users_collection.find({}, {"_id": 0}))), 200)
+
 
 @app.route("/user/<userid>", methods=['GET'])
 @jwt_required()
@@ -57,13 +45,12 @@ def get_by_id(userid):
    current_user = json.loads(get_jwt_identity())
    if current_user["id"] != userid and current_user.get("admin") != True:
       return make_response({"error": "You don't have access to that information"}, 401)
-   
-   for user in users:
-      if str(user["id"]) == str(userid):
-         res = make_response(jsonify(user),200)
-         return res
-      
-   return error_not_found("User ID not found")
+
+   user = users_collection.find_one({"id": userid}, {"_id": 0})
+   if user is None:
+      return error_not_found("User ID not found")
+   return make_response(jsonify(user), 200)
+
 
 @app.route("/user/name/<username>", methods=["GET"])
 @jwt_required()
@@ -72,12 +59,10 @@ def get_by_name(username):
    if current_user["name"] != username and current_user.get("admin") != True:
       return make_response({"error": "You don't have access to that information"}, 401)
 
-   for user in users:
-      if str(user["name"]) == str(username):
-         res = make_response(jsonify(user), 200)
-         return res
-      
-   return error_not_found("User name not found")
+   user = users_collection.find_one({"name": username}, {"_id": 0})
+   if user is None:
+      return error_not_found("User name not found")
+   return make_response(jsonify(user), 200)
 
 
 @app.route("/user/<userid>/name/<new_name>", methods=["PUT"])
@@ -86,15 +71,17 @@ def update_user(userid, new_name):
    current_user = json.loads(get_jwt_identity())
    if current_user["id"] != userid and current_user.get("admin") != True:
       return make_response({"error": "You don't have access to that information"}, 401)
-   
-   for user in users:
-      if str(user["id"]) == userid:
-         user["name"] = new_name
-         res = make_response(jsonify(user), 200)
-         write(users)
-         return res
-      
-   return error_not_found("User ID not found")
+
+   updated = users_collection.find_one_and_update(
+         {"id": userid},
+         {"$set": {"name": new_name}},
+         projection={"_id": 0},
+         return_document=ReturnDocument.AFTER,
+      )
+   if not updated :
+      return error_not_found("User ID not found")
+   return make_response(jsonify(updated), 200)
+
 
 @app.route("/user/<userid>", methods=['DELETE'])
 @jwt_required()
@@ -103,40 +90,44 @@ def delete_user(userid):
    if current_user["id"] != userid and current_user.get("admin") != True:
       return make_response({"error": "You don't have access to that information"}, 401)
 
-   for user in users:
-      if str(user["id"]) == str(userid):
-         users.remove(user)
-         write(users)
-         return make_response(jsonify(user), 200)
-      
-   return error_not_found("User ID not found")
+   result = users_collection.delete_one({"id": userid})
+   if result.deleted_count == 0:
+      return make_response(jsonify({
+         "success": False,
+            "message": "User not found",
+      }), 404)
+
+   return make_response(jsonify({
+      "success": True,
+      "message": "User deleted successfully",
+   }), 200)
+
 
 @app.route("/user/<userid>", methods=['POST'])
 def create_user(userid):
    req: dict = request.get_json()
 
-   for user in users:
-      if str(user["id"]) == str(userid):
-            print(user["id"])
-            print(userid)
-            return make_response(jsonify({"error":"user ID already exists"}),500)
-
-   req["last_used"] = time.time_ns()
-   if "admin" not in req.keys():
-      req["admin"] = False
+   if users_collection.find_one({"id": userid}) is not None:
+      return make_response(jsonify({"error":"user ID already exists"}),500)
    
-   users.append(req)
-   write(users)
-   res = make_response(jsonify({"message":"user added"}),200)
-   return res
+   newuser = {
+      "id": userid,
+      "name": req["name"],
+      "admin": False if "admin" not in req.keys() else req["admin"],
+      "last_active": time.time_ns()
+   }
+   
+   users_collection.insert_one(newuser.copy())
+   return make_response(jsonify(newuser), 201)
+
 
 @app.route("/login", methods=["POST"])
 def login():
    req = request.get_json()
-   for user in users:
-      if user["id"] == req["id"]:
-         token = create_access_token(identity = json.dumps(user))
-         return make_response(jsonify(access_token = token), 200)
+   user = users_collection.find_one({"id": req["id"]}, {"_id": 0})
+   if user:
+      token = create_access_token(identity = json.dumps(user))
+      return make_response(jsonify(access_token = token), 200)
 
    return error_not_found("User ID not found")
 
