@@ -1,9 +1,11 @@
+import os
 from uuid import uuid4
 from pymongo import MongoClient, ReturnDocument
 
 # MongoDB connection
-client = MongoClient("mongodb://root:example@localhost:27017/")
-db = client["movies"]
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:example@mongo-movie:27017/")
+client = MongoClient(MONGO_URI)
+db = client["moviedb"]
 movies_collection = db["movies"]
 actors_collection = db["actors"]
 
@@ -12,7 +14,7 @@ def movies(_,info):
 
 
 def movie_with_id(_,info,_id):
-    return movies_collection.find_one({"_id": _id})
+    return movies_collection.find_one({"id": _id})
 
             
 def movie_with_title(_,info,_title):
@@ -21,7 +23,7 @@ def movie_with_title(_,info,_title):
 
 def add_movie(_,info,_title,_director,_rating):
     newmovie = {
-        "_id": str(uuid4()),
+        "id": str(uuid4()),
         "title": _title,
         "director": _director,
         "rating": _rating
@@ -32,7 +34,7 @@ def add_movie(_,info,_title,_director,_rating):
 
 def update_movie_rate(_,info,_id,_rate):
     return movies_collection.find_one_and_update(
-        {"_id": _id},
+        {"id": _id},
         {"$set": {"rating": _rate}},
         return_document=ReturnDocument.AFTER,
     )
@@ -40,7 +42,7 @@ def update_movie_rate(_,info,_id,_rate):
 
 def update_movie_title(_,info,_id,_title):
     return movies_collection.find_one_and_update(
-        {"_id": _id},
+        {"id": _id},
         {"$set": {"title": _title}},
         return_document=ReturnDocument.AFTER,
     )
@@ -48,18 +50,18 @@ def update_movie_title(_,info,_id,_title):
 
 def update_movie_director(_,info,_id,_director):
     return movies_collection.find_one_and_update(
-        {"_id": _id},
+        {"id": _id},
         {"$set": {"director": _director}},
         return_document=ReturnDocument.AFTER,
     )
 
 
 def resolve_actors_in_movie(movie, info):
-    return list(actors_collection.find({"films": movie["_id"]}))
+    return list(actors_collection.find({"films": movie["id"]}))
 
 
 def delete_movie(_, info, _id):
-    result = movies_collection.delete_one({"_id": _id})
+    result = movies_collection.delete_one({"id": _id})
     if result.deleted_count == 0:
         return {
             "success": False,

@@ -1,50 +1,24 @@
 services:
-  mongo:
+  mongo-movie:
     image: mongo
     restart: always
-    ports:
-      - 27017:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
-    healthcheck:
-      test:
-        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-  mongo-seed:
-    build:
-      context: .
-      dockerfile: movie/Dockerfile
-    environment:
-      MONGO_URI: mongodb://root:example@mongo:27017/?authSource=admin
-    depends_on:
-      mongo:
-        condition: service_healthy
-    command:
-      - python3
-      - seed_mongo.py
-  mongo-express:
-    image: mongo-express
-    restart: always
-    ports:
-      - 8081:8081
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
-      ME_CONFIG_BASICAUTH: false
+    volumes:
+      - ./movie/data:/seed:ro
+      - ./movie/data/init.js:/docker-entrypoint-initdb.d/init.js:ro
 
   movie:
     build:
       context: .
       dockerfile: movie/Dockerfile
     depends_on:
-      mongo-seed:
-        condition: service_completed_successfully
+      - mongo-movie
     ports:
       - "3001:3001"
+    environment:
+      - MONGO_URI=mongodb://root:example@mongo-movie:27017/
 
   booking:
     build:
