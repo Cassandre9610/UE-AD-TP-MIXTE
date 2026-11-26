@@ -3,7 +3,7 @@
     {
       "id": "chris_rivers",
       "name": "Chris Rivers",
-      "last_active":1360031010
+      "last_active": 1360031010
     },
     {
       "id": "peter_curley",
@@ -34,6 +34,18 @@
       "id": "dwight_schrute",
       "name": "Dwight Schrute",
       "last_active": 1360031202
+    },
+    {
+      "id": "nestor_teissier",
+      "name": "Nestor Teissier",
+      "last_active": 1360031202,
+      "admin": true
+    },
+    {
+      "id": "martine_villain",
+      "name": "Martine Villain",
+      "last_active": 1360031202,
+      "admin": true
     }
   ]
 }

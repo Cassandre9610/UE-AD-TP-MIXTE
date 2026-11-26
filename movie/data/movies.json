@@ -41,6 +41,18 @@
       "title": "The Hunger Games : Sunrise on the Reaping",
       "director": "Francis Lawrence",
       "rating": 8.0
+    },
+    {
+      "id": "e1f3c8a2-4b5d-4c6e-9f1a-2b3c4d5e6f7g",
+      "title": "The Shawshank Redemption",
+      "director": "Frank Darabont",
+      "rating": 9.3
+    },
+    {
+      "id": "82347feb-58f0-4938-b651-a9dfaa04eefb",
+      "title": "The Lord of the Rings: The Return of the King",
+      "director": "Peter Jackson",
+      "rating": 9.0
     }
   ]
 }
