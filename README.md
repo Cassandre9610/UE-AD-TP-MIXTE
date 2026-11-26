@@ -31,21 +31,251 @@ Les services utilisent les ports suivants :
 
 Toutes les données sont échangées au format JSON, sauf la page d'accueil des services qui retourne du HTML.
 
-## User
+## User — port 3004
 
-## Movie
+Ce service nécessite un **token d'identification**
 
-Récupérer la liste de tous les films
-Récupérer un film par son identifiant
-Créer un film
-Mettre à jour la notation d'un film
-Mettre à jour le titre d'un film
-Mettre à jour le directeur d'un film
-Supprimer un film avec son identifiant
+| Méthode  | Route                            | Description                                 | Permissions nécessaires    |
+| -------- | -------------------------------- | ------------------------------------------- | -------------------------- |
+| `GET`    | `/json`                          | Retourne tous les utilisateurs              | admin                      |
+| `GET`    | `/user/{userid}`                 | Retourne un utilisateur par son identifiant | utilisateur concerné/admin |
+| `GET`    | `/user/name/{username}`          | Retourne un utilisateur par son nom exact   | utilisateur concerné/admin |
+| `PUT`    | `/user/{userid}/name/{new_name}` | Modifie le nom d'un utilisateur             | utilisateur concerné/admin |
+| `POST`   | `/user/{userid}`                 | Crée un utilisateur                         | publique                   |
+| `DELETE` | `/user/{userid}`                 | Supprime un utilisateur                     | utilisateur concerné/admin |
+| `POST`   | `/login`                         | Renvoie un token d'identification           | publique                   |
 
-## Schedule
+Objet utilisateur :
 
-## Booking
+```json
+{
+  "id": "chris_rivers",
+  "name": "Chris Rivers",
+  "last_active": 1360031010
+}
+```
+
+Exemples :
+
+```bash
+curl http://localhost:3004/json
+curl http://localhost:3004/user/chris_rivers
+curl -X DELETE http://localhost:3004/user/chris_rivers
+curl -X POST http://localhost:3004/login --data '{"id": "chris_rivers"}'
+```
+
+## Movie — port 3001
+
+Service GraphQL
+
+**Endpoint :** `POST` `/graphql`
+
+### Types
+
+**Actor :**
+
+```json
+{
+    "id": "actor3",
+        "firstname": "Alain",
+        "lastname": "Chabat",
+        "birthyear": 1958,
+        "films": [
+            "96798c08-d19b-4986-a05d-7da856efb697",
+            ...
+        ]
+}
+```
+
+**Movie :**
+
+```json
+{
+    "id": "96798c08-d19b-4986-a05d-7da856efb697",
+    "title": "Test",
+    "director": "Someone",
+    "rating": 1.2,
+    "actors": [
+        {
+            "id": "actor3",
+            ...
+        },
+        ...
+    ]
+}
+```
+
+**DeleteResponse :**
+
+```json
+{
+  "success": true,
+  "message": "Movie removed successfully"
+}
+```
+
+### Requêtes
+
+| Type     | Requête                                                            | Retour         |
+| -------- | ------------------------------------------------------------------ | -------------- |
+| query    | movies                                                             | \[Movie\]      |
+| query    | movie_with_id(\_id: String!)                                       | Movie          |
+| query    | movie_with_title(\_title: String!)                                 | Movie          |
+| query    | actor_with_id(\_id: String!)                                       | Actor          |
+| mutation | add_movie(\_title: String!, \_director: String!, \_rating: Float!) | Movie          |
+| mutation | update_movie_rate(\_id: String!, \_rate: Float!)                   | Movie          |
+| mutation | update_movie_title(\_id: String!, \_title: String!)                | Movie          |
+| mutation | update_movie_director(\_id: String!, \_director: String!)          | Movie          |
+| mutation | delete_movie(\_id: String!)                                        | DeleteResponse |
+
+## Schedule — port 3002
+
+Service gRPC
+
+### Types
+
+**Date :**
+
+```json
+{
+  "date": "20151130"
+}
+```
+
+**Dates :**
+
+```json
+{
+    "date": [
+        "20151130",
+        ...
+    ]
+}
+```
+
+**NewSchedule :**
+
+```json
+{
+  "date": "20151130",
+  "movie": "720d006c-3a57-4b6a-b18f-9b713b073f3c"
+}
+```
+
+**MovieID :**
+
+```json
+{
+  "id": "720d006c-3a57-4b6a-b18f-9b713b073f3c"
+}
+```
+
+**Day :**
+
+```json
+{
+    "date": "20151130",
+    "movies": [
+        "720d006c-3a57-4b6a-b18f-9b713b073f3c",
+        ...
+    ]
+}
+```
+
+**Schedules :**
+
+```json
+{
+    "date": "20151130",
+    "movies": [
+        Day
+    ]
+}
+```
+
+### Requêtes
+
+| Requête                          | Réponse   |
+| -------------------------------- | --------- |
+| GetSchedule()                    | Schedules |
+| CreateSchedule(NewSchedule)      | Day       |
+| GetScheduleByDate(Date)          | Day       |
+| GetDatesByMovieId(MovieID)       | Dates     |
+| DeleteScheduleByDate(Date)       | Schedules |
+| DeleteMovieFromDate(NewSchedule) | Day       |
+
+Lors de la création d'un emploi du temps, Schedule vérifie auprès du service Movie que l'identifiant du film existe.
+
+## Booking — port 3003
+
+Service GraphQL
+
+**Endpoint :** `POST` `/graphql`
+
+### Types
+
+**Booking :**
+
+```json
+{
+  "userid": "chris_rivers",
+  "dates": [
+    {
+      "date": "20151201",
+      "movies": [
+        "267eedb8-0f5d-42d5-8f43-72426b9fb3e6",
+        ...
+      ]
+    }
+  ]
+}
+```
+
+**Schedule :**
+
+```json
+{
+  "date": "20151201",
+  "movies": [
+    "267eedb8-0f5d-42d5-8f43-72426b9fb3e6",
+    ...
+  ]
+}
+```
+
+### Requêtes
+
+| Type     | Requête                                                                        | Retour      |
+| -------- | ------------------------------------------------------------------------------ | ----------- |
+| query    | `booking_with_userid(_userid: String!)`                                        | `Booking`   |
+| query    | `booking_with_date(_date: String!)`                                            | `[Booking]` |
+| query    | `booking_with_movie(_movie_id: String!)`                                       | `[Booking]` |
+| query    | `movies_with_userid_and_date(_user_id: String!, _date: String!)`               | `[String]`  |
+| mutation | `add_booking(_userid: String!, _date: String!, _movie_id: String!)`            | `Booking`   |
+| mutation | `delete_movie_from_date(_userid: String!, _date: String!, _movie_id: String!)` | `Booking`   |
+| mutation | `delete_user_from_booking(_userid: String!)`                                   | `Booking`   |
+
+Lors de l'ajout d'une réservation, Booking vérifie auprès du service Schedule que le film est bien prévu à la date demandée.
+
+## Formats et erreurs
+
+### REST
+
+Les erreurs sont retournées sous cette forme :
+
+```json
+{
+  "error": "User ID not found"
+}
+```
+
+### GraphQL
+
+Le type DeleteResponse est utilisé, sinon une erreur GraphQLError est levée
+
+### gRPC
+
+Utilisation des erreurs gRPC avec les codes correspondants (NOT_FOUND, INVALID_ARGUMENT...)
 
 # Aide
 
