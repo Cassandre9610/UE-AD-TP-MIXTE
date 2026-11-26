@@ -24,10 +24,10 @@ Les services utilisent les ports suivants :
 
 | Service  | URL locale              |
 | -------- | ----------------------- |
-| Movie    | `http://localhost:3201` |
-| Schedule | `http://localhost:3202` |
-| Booking  | `http://localhost:3203` |
-| User     | `http://localhost:3204` |
+| Movie    | `http://localhost:3001` |
+| Schedule | `http://localhost:3002` |
+| Booking  | `http://localhost:3003` |
+| User     | `http://localhost:3004` |
 
 Toutes les données sont échangées au format JSON, sauf la page d'accueil des services qui retourne du HTML.
 
