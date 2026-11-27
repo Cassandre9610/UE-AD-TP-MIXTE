@@ -144,30 +144,47 @@ mutation{
 
 ## 6. Ajouter une séance à l’emploi du temps
 
-Le service Schedule expose du **gRPC**, pas une route HTTP. Avec `grpcurl` installé, ajouter Victor Frankenstein à la date `20261129` :
+`localhost:3002 Schedule/CreateSchedule`
 
-```powershell
-grpcurl -plaintext -import-path . -proto schedule/schedule.proto -d '{"date":"20261129","movie":"7daf7208-be4d-4944-a3ae-c1c2f516f3e6"}' localhost:3002 Schedule/CreateSchedule
+```json
+{
+  "date": "20261127",
+  "movie": "e1f3c8a2-4b5d-4c6e-9f1a-2b3c4d5e6f7g"
+}
 ```
 
 Vérifier l’emploi du temps de cette date :
 
-```powershell
-grpcurl -plaintext -import-path . -proto schedule/schedule.proto -d '{"date":"20261129"}' localhost:3002 Schedule/GetScheduleByDate
+`localhost:3002 Schedule/GetScheduleByDate`
+
+```json
+{
+  "date": "20261127"
+}
 ```
 
 ## 7. Réserver la séance comme client
 
 **POST** `http://localhost:3003/graphql`
 
+```graphQL
+mutation AddBooking($userid: String!, $date: String!, $movie_id: String!) {
+	add_booking(_userid: $userid, _date: $date, _movie_id: $movie_id) {
+		userid dates {
+			date
+			movies
+		}
+	}
+}
+```
+
+Variables :
+
 ```json
 {
-  "query": "mutation AddBooking($userid: String!, $date: String!, $movie_id: String!) { add_booking(_userid: $userid, _date: $date, _movie_id: $movie_id) { userid dates { date movies } } }",
-  "variables": {
-    "userid": "patrice_braud",
-    "date": "20261128",
-    "movie_id": "e1f3c8a2-4b5d-4c6e-9f1a-2b3c4d5e6f7g"
-  }
+  "userid": "patrice_braud",
+  "date": "20261128",
+  "movie_id": "e1f3c8a2-4b5d-4c6e-9f1a-2b3c4d5e6f7g"
 }
 ```
 
